@@ -34,3 +34,7 @@ New Features:
 - Personalize with user session and id after auth
 - Increase data soure material
 - Speed up response time (average is 25s)
+- Speech to Text and Back to Speech
+- Image uploads and interpretation
+
+Estimated Time To Live (1 week) (October 8)
