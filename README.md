@@ -30,7 +30,8 @@ Requirements:
 New Features:
 
 - Add auth to the app
-- Flesh it out as a fully function api call
+- Flesh it out as a fully function api
+- Web application with React
 - Personalize with user session and id after auth
 - Increase data soure material
 - Speed up response time (average is 25s)
