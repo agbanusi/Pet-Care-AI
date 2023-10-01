@@ -1,4 +1,4 @@
-## This is a test POC of a custome trained Personal AI for dog owners.
+## This is a test POC of a custom trained Personal AI for dog owners call PetAI.
 
 You can chat with the AI assistant about your dog needs, behaviours, care, grooming and breeds.
 
