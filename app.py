@@ -43,16 +43,16 @@ def deserialize_chat_message(data):
     
 
 
-def pre_get_chatbot(input_text):
-    n_index = index.as_query_engine(verbose=True)  #.load_from_disk('index.json')
-    response = n_index.query(input_text)
-    return response.response
+# def pre_get_chatbot(input_text):
+#     n_index = index.as_query_engine(verbose=True)  #.load_from_disk('index.json')
+#     response = n_index.query(input_text)
+#     return response.response
 
-def pre_chatbot(input_text):
-    pre_input = pre_get_chatbot(input_text)
-    n_index = index.as_chat_engine(verbose=True)
-    response = n_index.chat(f"explain further and give more details on this '{pre_input}'")
-    return response.response
+# def pre_chatbot(input_text):
+#     pre_input = pre_get_chatbot(input_text)
+#     n_index = index.as_chat_engine(verbose=True)
+#     response = n_index.chat(f"explain further and give more details on this '{pre_input}'")
+#     return response.response
 
 def add_to_history(message,user_id, ai_or_human):
     context = None
@@ -74,42 +74,79 @@ def add_to_history(message,user_id, ai_or_human):
 def clear_data():
     redis_client.delete(f'conversation:{user_id}')
     
+def is_pet_related_query(index, query):
+  custom_chat_history = redis_client.lrange(f'conversation:{user_id}', 0, -1)
+  custom_chat_history = [deserialize_chat_message(json.loads(msg)) for msg in custom_chat_history]
+
+  engine = index.as_query_engine(verbose=True, chat_history=custom_chat_history,)
+  query_text = engine.query(query).response
+  return query_text.find("I'm sorry, but") == -1
+
+def generate_response(index, query, user_id):
+  # Get the user's custom chat history
+  custom_chat_history = redis_client.lrange(f'conversation:{user_id}', 0, -1)
+  custom_chat_history = [deserialize_chat_message(json.loads(msg)) for msg in custom_chat_history]
+
+  # Create a chat engine
+  engine = index.as_query_engine(verbose=True, chat_history=custom_chat_history,)
+  chat_engine = index.as_chat_engine(
+      query_engine=engine,
+      chat_mode='context',
+      chat_history=custom_chat_history,
+      verbose=True
+  )
+
+  # Generate a response
+  response = chat_engine.chat(f" {query}").response
+  # Add the response to the user's conversation history
+  add_to_history(response, user_id,"AI")
+  return response
+
+def pre_update():
+    #set up context for new convo, should only be called once
+    add_to_history('Tell me about dogs generally', user_id, "USER")
+    add_to_history("Dogs are domesticated mammals and are often referred to as man's best friend due to their close relationship with humans. They belong to the Canidae family and are descendants of wolves. Dogs come in a wide variety of breeds, each with its own unique characteristics, appearance, and temperament.", user_id, "AI")
+    
 def chatbot(input_text):
-    # custom_chat_history = redis_client.lrange(f'conversation:{user_id}', 0, -1)
-    # print(custom_chat_history)
-    # return
-    engine = index.as_query_engine(verbose=True)
-    
-    custom_chat_history = redis_client.lrange(f'conversation:{user_id}', 0, -1)
-    custom_chat_history = [deserialize_chat_message(json.loads(msg)) for msg in custom_chat_history]
     add_to_history(input_text, user_id, "USER")
-    chat_engine = index.as_chat_engine(
-        query_engine=engine, 
-        chat_mode = 'best',
-        #condense_question_prompt=custom_prompt,
-        chat_history=custom_chat_history,
-        verbose=True
-    )
-     
-    query_text = engine.query(input_text).response
-    print(query_text)
-    #avoid non contextual inputs
-    if query_text.find("I'm sorry, but",0, 20) != -1:
-        add_to_history(query_text, user_id,"AI")
-        return query_text
+    if not is_pet_related_query(index,input_text):
+      # If the query is not related to pets, return a default response
+        response = "I'm sorry, but I can only answer questions about pets."
+    else:
+        # If the query is related to pets, generate a response using the chat engine
+        response = generate_response(index, input_text, user_id)
     
-    response = chat_engine.chat(f" {input_text}").response #(f"I need you to act as a query system, if ${input_text} is similar to this text 'I'm sorry, but I don't have enough information to answer your query.' respond with 'I'm sorry, but I don't have enough information to answer your query.', otherwise, try as much to expatiate on this and give more details on the explanation '{input_text}', using previous context")
-    add_to_history(response, user_id,"AI")
+    # engine = index.as_query_engine(verbose=True, similarity_top_k=1)
+    
+    # custom_chat_history = redis_client.lrange(f'conversation:{user_id}', 0, -1)
+    # custom_chat_history = [deserialize_chat_message(json.loads(msg)) for msg in custom_chat_history]
+    # add_to_history(input_text, user_id, "USER")
+    # chat_engine = index.as_chat_engine(
+    #     query_engine=engine, 
+    #     chat_mode = 'best',
+    #     chat_history=custom_chat_history,
+    #     verbose=True
+    # )
+     
+    # query_text = engine.query(input_text).response
+    # print('first query',query_text)
+    # #avoid non contextual inputs
+    # if query_text.find("I'm sorry, but",0, 20) != -1:
+    #     add_to_history(query_text, user_id,"AI")
+    #     return query_text
+    
+    # response = chat_engine.chat(f" {input_text}").response #(f"I need you to act as a query system, if ${input_text} is similar to this text 'I'm sorry, but I don't have enough information to answer your query.' respond with 'I'm sorry, but I don't have enough information to answer your query.', otherwise, try as much to expatiate on this and give more details on the explanation '{input_text}', using previous context")
+    # add_to_history(response, user_id,"AI")
     
     return response
-  
 
 
 iface = gr.Interface(fn=chatbot,
                      inputs=gr.components.Textbox(lines=7, label="Enter your text"),
                      outputs="text",
-                     title="Custom-trained AI Chatbot On Dogs")
+                     title="Custom-trained AI Chatbot On Pets")
 
 index = construct_index("sources")
 redis_client.flushall()
+pre_update()
 iface.launch(share=True)
