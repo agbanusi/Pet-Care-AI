@@ -18,7 +18,7 @@ def search_for_urls(query, num_results=10):
 # Function to scrape a webpage
 def scrape_webpage(url):
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=30)
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, "html.parser")
             # Extract and process data from the webpage
@@ -32,7 +32,7 @@ def scrape_webpage(url):
                 return data+" \n"
     except Exception as e:
         print(f"Error scraping {url}: {str(e)}")
-    return None
+        return None
 
 # Function to save data to a file
 def save_to_file(data, filename):
@@ -41,26 +41,26 @@ def save_to_file(data, filename):
 
 def loop_and_scrap():
   queries = [
+      "cats behavior",
+      "dogs behavior",
+      "popular dog breeds",
+      "popular cat breeds",
+      "pets care tips",
+      "dogs care tips",
+      "cats care tips",
+      "dogs behaviours and meaning",
+      "cats behaviours and meaning",
+      "dogs first aid",
+      "cats first aid",
       "dogs feeding habits",
       "cats feeding habits",
-    #   "cats behavior",
-    #   "dogs behavior",
-    #   "popular dog breeds",
-    #   "popular cat breeds",
-    #   "pets care tips",
-    #   "dogs care tips",
-    #   "cats care tips",
-    #   "dogs behaviours and meaning",
-    #   "cats behaviours and meaning",
-    #   "dogs first aid",
-    #   "cats first aid",
   ]
 
   # Specify the number of search results per query
-  num_results_per_query = 5
+  num_results_per_query = 10
 
   # Specify the output file
-  output_filename = "sources/main_data.txt"
+  output_filename = "sources/pets_data.txt"
   # Loop through the queries and scrape data
   for query in queries:
       print(f"Searching for: {query}")
