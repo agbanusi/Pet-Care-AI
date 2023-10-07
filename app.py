@@ -1,11 +1,8 @@
-from llama_index import SimpleDirectoryReader, VectorStoreIndex, LLMPredictor, PromptHelper
-from langchain.chat_models import ChatOpenAI
+from llama_index import SimpleDirectoryReader, VectorStoreIndex
 import gradio as gr
-import sys
 import os
 import redis
 import json
-from llama_index.prompts  import PromptTemplate
 from llama_index.llms import ChatMessage, MessageRole
 from dotenv import load_dotenv
 load_dotenv()
@@ -15,7 +12,7 @@ redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 api_key = os.getenv("OPENAI_API_KEY")
 index = None
-user_id = 10
+user_id = '10'
 
 # gather data on dog breeds,
 # gather data on dog care and grooming
@@ -40,19 +37,7 @@ def deserialize_chat_message(data):
         return ChatMessage(role=MessageRole.USER, content=content)
     else:
         return ChatMessage(role=MessageRole.ASSISTANT, content=content)
-    
 
-
-# def pre_get_chatbot(input_text):
-#     n_index = index.as_query_engine(verbose=True)  #.load_from_disk('index.json')
-#     response = n_index.query(input_text)
-#     return response.response
-
-# def pre_chatbot(input_text):
-#     pre_input = pre_get_chatbot(input_text)
-#     n_index = index.as_chat_engine(verbose=True)
-#     response = n_index.chat(f"explain further and give more details on this '{pre_input}'")
-#     return response.response
 
 def add_to_history(message,user_id, ai_or_human):
     context = None
@@ -71,8 +56,13 @@ def add_to_history(message,user_id, ai_or_human):
             })    
     redis_client.rpush(f'conversation:{user_id}', context)
 
-def clear_data():
+def clear_data(user_id):
     redis_client.delete(f'conversation:{user_id}')
+
+def get_data(user_id):
+    custom_chat_history = redis_client.lrange(f'conversation:{user_id}', 0, -1)
+    custom_chat_history = [deserialize_chat_message(json.loads(msg)) for msg in custom_chat_history]
+    return custom_chat_history
     
 def is_pet_related_query(index, query):
   custom_chat_history = redis_client.lrange(f'conversation:{user_id}', 0, -1)
@@ -102,12 +92,12 @@ def generate_response(index, query, user_id):
   add_to_history(response, user_id,"AI")
   return response
 
-def pre_update():
+def pre_update(user_id):
     #set up context for new convo, should only be called once
     add_to_history('Tell me about dogs generally', user_id, "USER")
     add_to_history("Dogs are domesticated mammals and are often referred to as man's best friend due to their close relationship with humans. They belong to the Canidae family and are descendants of wolves. Dogs come in a wide variety of breeds, each with its own unique characteristics, appearance, and temperament.", user_id, "AI")
     
-def chatbot(input_text):
+def chatbot(input_text, user_id):
     add_to_history(input_text, user_id, "USER")
     if not is_pet_related_query(index,input_text):
       # If the query is not related to pets, return a default response
@@ -116,37 +106,27 @@ def chatbot(input_text):
         # If the query is related to pets, generate a response using the chat engine
         response = generate_response(index, input_text, user_id)
     
-    # engine = index.as_query_engine(verbose=True, similarity_top_k=1)
-    
-    # custom_chat_history = redis_client.lrange(f'conversation:{user_id}', 0, -1)
-    # custom_chat_history = [deserialize_chat_message(json.loads(msg)) for msg in custom_chat_history]
-    # add_to_history(input_text, user_id, "USER")
-    # chat_engine = index.as_chat_engine(
-    #     query_engine=engine, 
-    #     chat_mode = 'best',
-    #     chat_history=custom_chat_history,
-    #     verbose=True
-    # )
-     
-    # query_text = engine.query(input_text).response
-    # print('first query',query_text)
-    # #avoid non contextual inputs
-    # if query_text.find("I'm sorry, but",0, 20) != -1:
-    #     add_to_history(query_text, user_id,"AI")
-    #     return query_text
-    
-    # response = chat_engine.chat(f" {input_text}").response #(f"I need you to act as a query system, if ${input_text} is similar to this text 'I'm sorry, but I don't have enough information to answer your query.' respond with 'I'm sorry, but I don't have enough information to answer your query.', otherwise, try as much to expatiate on this and give more details on the explanation '{input_text}', using previous context")
-    # add_to_history(response, user_id,"AI")
-    
     return response
 
+def launch_gradio():
+    
+    iface = gr.Interface(fn=chatbot,
+                        inputs=gr.components.Textbox(lines=7, label="Enter your text"),
+                        outputs="text",
+                        title="Custom-trained AI Chatbot On Pets")
+    io = iface.launch(share=True)
+    return io
 
-iface = gr.Interface(fn=chatbot,
-                     inputs=gr.components.Textbox(lines=7, label="Enter your text"),
-                     outputs="text",
-                     title="Custom-trained AI Chatbot On Pets")
+def initiated():
+    if( index == None):
+        initiate_index()
+    return True
 
-index = construct_index("sources")
-redis_client.flushall()
-pre_update()
-iface.launch(share=True)
+def initiate_index():
+    global index
+    new_index = construct_index("sources")
+    index = new_index
+    
+# redis_client.flushall()
+# pre_update(user_id)
+#launch_gradio()
