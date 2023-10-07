@@ -27,15 +27,16 @@ Requirements:
 - OPEN AI Secret
 - Redis
 
+## API Documentation
+
+http://localhost:8080/docs
+
 New Features:
 
 - Add auth to the app
-- Flesh it out as a fully function api
 - Web application with React
-- Personalize with user session and id after auth
-- Increase data soure material
-- Speed up response time (average is 25s)
+- Speed up response time (average is 65s)
 - Speech to Text and Back to Speech
 - Image uploads and interpretation
 
-Estimated Time To Live (1 week) (October 8)
+Estimated Time To Live (1 week) (October 15)
