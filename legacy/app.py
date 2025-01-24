@@ -12,7 +12,7 @@ redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 api_key = os.getenv("OPENAI_API_KEY")
 index = None
-user_id = '10'
+#user_id = '10'
 
 # gather data on dog breeds,
 # gather data on dog care and grooming
@@ -64,7 +64,7 @@ def get_data(user_id):
     custom_chat_history = [deserialize_chat_message(json.loads(msg)) for msg in custom_chat_history]
     return custom_chat_history
     
-def is_pet_related_query(index, query):
+def is_pet_related_query(index, query, user_id):
   custom_chat_history = redis_client.lrange(f'conversation:{user_id}', 0, -1)
   custom_chat_history = [deserialize_chat_message(json.loads(msg)) for msg in custom_chat_history]
 
@@ -99,7 +99,7 @@ def pre_update(user_id):
     
 def chatbot(input_text, user_id):
     add_to_history(input_text, user_id, "USER")
-    if not is_pet_related_query(index,input_text):
+    if not is_pet_related_query(index,input_text, user_id):
       # If the query is not related to pets, return a default response
         response = "I'm sorry, but I can only answer questions about pets."
     else:

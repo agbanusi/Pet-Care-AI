@@ -1,4 +1,4 @@
-## This is a test POC of a custom trained Personal AI for pet owners call PetAI.
+## Custom trained Personal AI for pet owners call PetAI.
 
 You can chat with the AI assistant about your dog needs, behaviours, care, grooming and breeds.
 
@@ -10,9 +10,11 @@ Right now you can clone with
 
 ` git clone {this_repo}`
 
-Then run with
+Setup `qdrant` with docker
 
-`python app.py`
+Then run app with
+
+`python ai_with_sources.py`
 
 Once you run it successfully go to your browser and search
 
@@ -27,16 +29,6 @@ Requirements:
 - OPEN AI Secret
 - Redis
 
-## API Documentation
+## Petabix
 
-http://localhost:8080/docs
-
-New Features:
-
-- Add auth to the app
-- Web application with React
-- Speed up response time (average is 65s)
-- Speech to Text and Back to Speech
-- Image uploads and interpretation
-
-Estimated Time To Live (1 week) (October 15)
+An AI powered platform for buying all pets focused need, booking veterinarian appointments online and pets breeders appointment wwith custom chat for relating with your dogs, cat and pets on a deeper level.
